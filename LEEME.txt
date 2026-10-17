@@ -1,0 +1,35 @@
+CONTROL DE CLIENTES - INSTALACIÓN EN HOSTINGER
+==============================================
+Requisitos: plan de hosting con PHP 8 o superior (cualquier plan Web/Business de Hostinger lo incluye).
+
+1) Subir archivos
+   hPanel -> Sitios web -> tu dominio -> Administrador de archivos -> public_html
+   (o la carpeta de un subdominio, ej. clientes.tudominio.com).
+   Sube el .zip y usa "Extraer". Deben quedar index.html, api.php, setup.php y .htaccess.
+
+2) Activar HTTPS (obligatorio, protege las contraseñas)
+   hPanel -> Seguridad -> SSL -> instalar y activar "Forzar HTTPS".
+
+3) Crear usuarios
+   Abre https://tudominio.com/setup.php, captura usuario, nombre y contraseña
+   del Administrador y de tus Comisionados (hasta 10; los que no uses déjalos en blanco), y pulsa "Crear usuarios".
+   Los nombres de los comisionados deben escribirse igual en "Comisionado del proyecto" de cada cliente.
+
+4) BORRA setup.php desde el Administrador de archivos.
+
+5) Entra a https://tudominio.com/ con tu usuario de administrador.
+
+Revisión de seguridad (hazla una vez):
+   - Abre https://tudominio.com/data/users.json : debe dar error 403 o 404. Si muestra contenido, avisa antes de usarlo.
+   - setup.php ya no debe existir en el servidor.
+
+Respaldos: cada día que guardas cambios se crea data/backup-AAAAMMDD.json. Descárgalos de vez en cuando
+desde el Administrador de archivos.
+
+Olvidaste una contraseña: borra data/users.json y abre setup.php de nuevo (tus clientes y datos NO se borran,
+están en data/state.json).
+
+Qué ve cada quien:
+   - Administrador: todo.
+   - Comisionados: solo Inicio y Calendario con SUS clientes y tareas (sin precios, costos, cobros ni notas).
+     El filtro lo hace el servidor (api.php), no la pantalla.

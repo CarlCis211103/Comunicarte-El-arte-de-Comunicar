@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de clientes</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--bg:#f6f5f1;--sf:#fff;--tx:#1f2430;--mu:#6b7280;--bd:#e2e0d8;--ac:#1d6b57;--ac2:#e3f1ec;--wr:#b4540a;--er:#b42318;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171c;--sf:#1e2128;--tx:#eceae4;--mu:#9aa0ab;--bd:#323640;--ac:#4cc3a3;--ac2:#1d3a33;--wr:#f0a05c;--er:#f47c70;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171c;--sf:#1e2128;--tx:#eceae4;--mu:#9aa0ab;--bd:#323640;--ac:#4cc3a3;--ac2:#1d3a33;--wr:#f0a05c;--er:#f47c70;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:14px 16px 0;max-width:1100px;margin:0 auto}
+h1{font-size:20px;margin:0 0 10px}
+nav{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--bd)}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 12px;color:var(--mu);font:inherit;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--ac);border-color:var(--ac);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.f2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+label{display:block;font-size:12px;color:var(--mu);margin-bottom:3px}
+input,select,textarea{width:100%;padding:8px;border:1px solid var(--bd);border-radius:7px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:80px;resize:vertical}
+button.b{background:var(--ac);color:#fff;border:0;border-radius:7px;padding:8px 14px;font:inherit;cursor:pointer}
+button.g{background:none;color:var(--ac);border:1px solid var(--bd);border-radius:7px;padding:6px 10px;font:inherit;cursor:pointer}
+button.d{color:var(--er)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.mu{color:var(--mu);font-size:13px}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;background:var(--ac2);color:var(--ac);font-size:12px;margin:2px 2px 0 0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.stats div{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:10px}
+.stats b{display:block;font-size:20px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{padding:6px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--mu);font-weight:600}
+.od{color:var(--er);font-weight:600}.wn{color:var(--wr)}
+.s-pendiente{border-left:4px solid #9aa0ab}.s-trabajando{border-left:4px solid #d99a1a}.s-terminado{border-left:4px solid #2f7de1}.s-implementado{border-left:4px solid #2e9e6b}
+.modal{position:fixed;inset:0;background:#0008;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal .card{max-width:560px;width:100%;max-height:90%;overflow:auto;margin:0}
+.modal textarea{min-height:230px}
+</style></head><body>
+<header><div class="row" style="justify-content:space-between"><h1>Control de clientes · Marketing y comercialización digital</h1><div id="who" class="row"></div></div><nav id="nav"></nav></header>
+<main id="main">Cargando…</main>
+<div id="md"></div>
+<script>
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const money=n=>"$"+Math.round(n||0).toLocaleString("es-MX");
+const iso=d=>new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const today=()=>iso(new Date());
+const fd=d=>d?d.split("-").reverse().join("/"):"—";
+const addD=(s,n)=>{const d=new Date(s+"T00:00");d.setDate(d.getDate()+n);return iso(d)};
+const addM=(s,m)=>{const d=new Date(s+"T00:00");d.setMonth(d.getMonth()+m);return iso(d)};
+const days=s=>Math.round((new Date(s+"T00:00")-new Date(today()+"T00:00"))/864e5);
+const ST=["pendiente","trabajando","terminado","implementado"];
+const STL={pendiente:"Pendiente",trabajando:"Trabajando",terminado:"Terminado",implementado:"Implementado"};
+const FQ=["mensual","semanal","único"];
+const FAC={mensual:1,semanal:4.33,"único":0};
+const TABS=[["hoy","Hoy"],["cal","Calendario"],["clientes","Clientes activos"],["nuevo","Cliente nuevo"],["par","Partners"],["pgo","Pagos a equipo y partners"],["parn","Partner nuevo"],["proy","Proyectos y deadlines"],["cob","Cobros"],["inf","Informes"],["tab","Tabulador de precios"],["cot","Cotizador"],["com","Info comercial"],["usr","Usuarios"]];
+const TPL=["Calendario de contenido; Publicación y programación; Reporte mensual","Brief y propuesta; Diseño de piezas; Aprobación del cliente","Optimizar perfil GBP; Publicar fotos y novedades; Reporte de posicionamiento","Estrategia y segmentación; Lanzar campaña; Optimización y reporte","Diseñar flujo de mensajes; Configurar envíos; Reporte de resultados","Reporte semanal de resultados","Estructura y contenido; Diseño; Desarrollo; Publicación","Planeación de sesión; Sesión; Edición y entrega"];
+const defaults=()=>({clients:[],tasks:[],reports:[],quotes:[],info:"",pagos:[],pend:[],log:[],grp:false,partners:[],pagosOut:[],mgrs:[{n:"Comisionado 1",uid:""},{n:"Comisionado 2",uid:""}],services:[
+["Community management (redes sociales)",3000,1500,"mensual"],["Diseño de contenido y creativos",2000,1000,"mensual"],
+["Google Business Profile / SEO local",1500,1000,"mensual"],["Administración de campañas (Meta/Google Ads)",2500,1500,"mensual"],
+["Email y WhatsApp marketing",1200,800,"mensual"],["Estrategia y reporte semanal",800,600,"semanal"],
+["Sitio web / landing page",6000,3000,"único"],["Fotografía y video",3500,1500,"único"]].map(([n,c,g,u],i)=>({id:uid(),n,c,g,u,tpl:TPL[i]}))});
+let role="admin",S=defaults(),tab="hoy",ui={q:{p:"",lines:[],notas:"",dias:15}},db=null,ready=false,st;
+const svc=id=>S.services.find(s=>s.id===id);
+const cl=id=>S.clients.find(c=>c.id===id);
+const price=s=>(+s.c||0)+(+s.g||0);
+const opt=(l,v)=>l.map(([a,b])=>`<option value="${esc(a)}"${a===v?" selected":""}>${esc(b)}</option>`).join("");
+
+let CSRF="",uname="",pollT=null;
+async function api(a,body){
+ try{const r=await fetch("api.php?a="+a,{method:body?"POST":"GET",headers:{"Content-Type":"application/json","X-CSRF":CSRF},credentials:"same-origin",body:body?JSON.stringify(body):undefined});
+  let j={};try{j=await r.json()}catch(e){}
+  if(r.status===401&&a!=="login"){CSRF="";ready=false;showLogin("Inicia sesión para continuar.");return{ok:false,auth:true}}
+  return Object.assign({ok:r.ok},j)}catch(e){return{ok:false,err:"Sin conexión con el servidor"}}
+}
+function showLogin(msg){
+ clearInterval(pollT);document.getElementById("nav").innerHTML="";document.getElementById("who").innerHTML="";
+ document.getElementById("main").innerHTML=`<div class="card" style="max-width:340px;margin:40px auto"><h3 style="margin-top:0">Iniciar sesión</h3><form id="lf"><label>Usuario</label><input id="lu" autocomplete="username" required><label style="margin-top:8px">Contraseña</label><input id="lp" type="password" autocomplete="current-password" required><p class="od" id="le" style="min-height:20px"></p><button class="b" style="width:100%">Entrar</button></form></div>`;
+ document.getElementById("le").textContent=msg||"";
+ document.getElementById("lf").onsubmit=async e=>{e.preventDefault();const r=await api("login",{u:document.getElementById("lu").value,p:document.getElementById("lp").value});if(r.ok)boot();else document.getElementById("le").textContent=r.err||"Usuario o contraseña incorrectos"};
+}
+function hdr(){document.getElementById("who").innerHTML=`<span id="sv" class="od"></span><span class="mu">${esc(uname)} · ${role==="mgr"?"Comisionado":"Administrador"}</span><button class="g" data-a="out">Salir</button>`}
+function applyMgr(d){S=Object.assign(defaults(),{clients:d.clients||[],tasks:d.tasks||[],services:[],mgrName:d.n||""})}
+async function boot(){
+ const m=await api("me");if(!m.ok){if(!m.auth)showLogin(m.err);return}
+ CSRF=m.csrf;role=m.role;uname=m.name;
+ const r=await api("state");if(!r.ok){if(!r.auth)showLogin(r.err);return}
+ clearInterval(pollT);
+ if(role==="mgr"){applyMgr(r.data||{});tab="ini";pollT=setInterval(async()=>{const x=await api("state");if(x.ok){applyMgr(x.data||{});render()}},60000)}
+ else{const d=r.data&&Object.keys(r.data).length?r.data:null;S=Object.assign(defaults(),d||{});S.mgrs=(m.mgrs||[]).map(n=>({n}));tab="hoy";ready=true;if(!d)save()}
+ hdr();render();
+}
+function save(){
+ if(!ready||role==="mgr")return;clearTimeout(st);
+ st=setTimeout(async()=>{const j=JSON.parse(JSON.stringify(S));delete j.mgrs;const r=await api("save",{state:j}),e=document.getElementById("sv");if(e)e.textContent=r.ok||r.auth?"":"⚠ No se pudo guardar"},400);
+}
+function render(){
+ document.getElementById("nav").innerHTML=(role==="mgr"?[["ini","Inicio"],["cal","Calendario"]]:TABS).map(([k,l])=>`<button class="${k===tab?"on":""}" data-a="tab" data-v="${k}">${l}</button>`).join("");
+ document.getElementById("main").innerHTML=({ini:vMgr,par:vPar,parn:vParN,pgo:vOut,usr:vUsr,hoy:vHoy,cal:vCal,cob:vCob,clientes:vCli,nuevo:vNew,proy:vProy,inf:vInf,tab:vTab,cot:vCot,com:vCom})[tab]();
+}
+function monthly(c){let i=0,g=0;(c.svcs||[]).forEach(x=>{const f=FAC[x.f]||0,s=svc(x.sid);i+=x.p*f;g+=(x.p-(x.r!=null?+x.r:s?+s.c:0))*f});return{i,g}}
+
+const par=id=>(S.partners||[]).find(p=>p.id===id);
+function pstat(p){let n=0,I=0,G=0;const L=[];S.clients.filter(c=>c.active&&c.ref===p.id).forEach(c=>{const m=monthly(c);n++;I+=m.i;G+=m.g;L.push(c)});return{n,I,G,L,C:Math.max(0,G)*(+p.pct||0)/100}}
+function totals(){let I=0,G=0,C=0;S.clients.filter(c=>c.active).forEach(c=>{const m=monthly(c);I+=m.i;G+=m.g});(S.partners||[]).forEach(p=>C+=pstat(p).C);return{I,G,C,N:G-C}}
+function partnerCard(){
+ const P=S.partners||[];if(!P.length)return"";
+ return `<div class="card"><h3 style="margin-top:0">Partners (referidos)</h3><div class="tw"><table><tr><th>Partner</th><th>%</th><th>Clientes referidos</th><th>Ingreso mensual</th><th>Ganancia generada</th><th>Comisión mensual</th></tr>${P.map(p=>{const t=pstat(p);return `<tr><td>${esc(p.nombre)}${p.active===false?' <span class="mu">(baja)</span>':""}</td><td>${+p.pct||0}%</td><td>${t.n}${t.L.length?'<div class="mu">'+t.L.map(c=>esc(c.nombre)).join(", ")+"</div>":""}</td><td>${money(t.I)}</td><td>${money(t.G)}</td><td><b>${money(t.C)}</b></td></tr>`}).join("")}</table></div></div>`}
+
+const mcost=c=>{const m=monthly(c);return m.i-m.g};
+const mgrNames=()=>[...new Set([...(S.mgrs||[]).map(m=>m.n),...S.clients.map(c=>c.enc).filter(Boolean)])];
+const oWho=o=>o.k==="partner"?(par(o.w)?.nombre||"(partner eliminado)"):(o.w||"—");
+const oOpts=o=>o.k==="partner"?opt((S.partners||[]).map(p=>[p.id,p.nombre]),o.w):opt(mgrNames().map(n=>[n,n]),o.w);
+function vOut(){
+ const O=(S.pagosOut||[]).slice().sort((a,b)=>a.f.localeCompare(b.f)),pen=O.filter(p=>!p.ok),late=pen.filter(p=>p.f<today()),sum=l=>l.reduce((t,p)=>t+p.a,0),mes=today().slice(0,7);
+ return `<div class="stats"><div><b>${money(sum(pen))}</b><span class="mu">Por pagar</span></div><div><b class="od">${money(sum(late))}</b><span class="mu">Vencido (${late.length})</span></div><div><b>${money(sum(O.filter(p=>p.ok&&(p.fp||"").slice(0,7)===mes)))}</b><span class="mu">Pagado este mes</span></div><div><b>${money(sum(O.filter(p=>p.ok)))}</b><span class="mu">Pagado en total</span></div></div>
+ <div class="row" style="margin-bottom:10px"><button class="b" data-a="genO">Generar pagos del mes</button><button class="g" data-a="addO">+ Pago manual</button><button class="g" data-a="expO">Exportar CSV</button></div>
+ <div class="tw"><table><tr><th>Tipo</th><th>Beneficiario</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Pagado</th><th></th></tr>${O.map(o=>`<tr><td><select data-o="${o.id}" data-f="k">${opt([["mgr","Equipo"],["partner","Partner"]],o.k)}</select></td><td><select data-o="${o.id}" data-f="w">${oOpts(o)}</select></td><td><input value="${esc(o.c)}" data-o="${o.id}" data-f="c"></td><td><input type="number" value="${o.a}" data-o="${o.id}" data-f="a"></td><td><input type="date" value="${o.f}" data-o="${o.id}" data-f="f" class="${!o.ok&&o.f<today()?"od":""}"></td><td><input type="checkbox" style="width:auto" ${o.ok?"checked":""} data-o="${o.id}" data-f="ok"> <span class="mu">${o.ok?fd(o.fp):""}</span></td><td><button class="g d" data-a="delO" data-v="${o.id}">✕</button></td></tr>`).join("")||'<tr><td colspan="7" class="mu">Sin pagos. Genera los del mes.</td></tr>'}</table></div>
+ <p class="mu">“Generar pagos del mes” crea, para cada comisionado, la suma de los costos reales de sus clientes activos, y para cada partner su comisión del mes (solo servicios mensuales y semanales; los de pago único agrégalos con “Pago manual”). Marca la casilla al confirmar que ya pagaste: se guarda la fecha.</p>`;
+}
+function outCard(){
+ const t7=addD(today(),7),L=(S.pagosOut||[]).filter(o=>!o.ok&&o.f<=t7).sort((a,b)=>a.f.localeCompare(b.f));
+ return `<div class="card"><h3 style="margin-top:0">Pagos por hacer a equipo y partners (${L.length})</h3>${L.map(o=>`<div class="row"><span style="flex:1">${esc(oWho(o))} · ${esc(o.c)} · ${money(o.a)}</span><span class="${o.f<today()?"od":""}">${fd(o.f)}</span><input type="checkbox" style="width:auto" title="Marcar como pagado" data-o="${o.id}" data-f="ok"></div>`).join("")||'<p class="mu">Sin pagos pendientes.</p>'}</div>`}
+function vCli(){
+ const q=(ui.s||"").toLowerCase(),L=S.clients.filter(c=>(ui.all||c.active)&&(!ui.e||c.enc===ui.e)&&(!q||(c.nombre+c.negocio+c.contacto).toLowerCase().includes(q)));const ENC=[...new Set(S.clients.map(c=>c.enc).filter(Boolean))];
+ let I=0,G=0;S.clients.filter(c=>c.active).forEach(c=>{const m=monthly(c);I+=m.i;G+=m.g});
+ const open=S.tasks.filter(t=>t.s==="pendiente"||t.s==="trabajando").length;
+ return `<div class="stats"><div><b>${S.clients.filter(c=>c.active).length}</b><span class="mu">Clientes activos</span></div><div><b>${money(I)}</b><span class="mu">Ingreso mensual estimado</span></div><div><b>${money(G)}</b><span class="mu">Ganancia mensual estimada</span></div><div><b>${open}</b><span class="mu">Tareas abiertas</span></div></div>
+ <div class="row" style="margin-bottom:10px"><input data-c="s" value="${esc(ui.s)}" placeholder="Buscar cliente…" style="width:190px"><select data-c="e" style="width:auto"><option value="">Todos los comisionados</option>${opt(ENC.map(e=>[e,e]),ui.e||"")}</select><label style="margin:0"><input type="checkbox" style="width:auto" data-c="all"${ui.all?" checked":""}> Incluir bajas</label><button class="g" data-a="expC">Exportar CSV</button></div>
+ <div class="grid">${L.map(c=>{const end=addM(c.ini,+c.meses||0),dl=days(end),m=monthly(c);
+ return `<div class="card"><b>${esc(c.nombre)}</b> ${c.active?"":'<span class="mu">(baja)</span>'}<div class="mu">${esc(c.negocio)}</div>
+ <div class="mu">${esc(c.contacto)}</div><div class="mu">Comisionado: ${esc(c.enc||"—")}</div>${c.ref&&par(c.ref)?`<div class="mu">Referido por: <b>${esc(par(c.ref).nombre)}</b></div>`:""}
+ <div>${(c.svcs||[]).map(x=>`<span class="tag">${esc(svc(x.sid)?.n||"Servicio")} · ${money(x.p)} ${x.f}</span>`).join("")}</div>
+ <div class="mu" style="margin-top:6px">Contrato: ${fd(c.ini)} → ${fd(end)} (${c.meses} meses) · <span class="${dl<0?"od":dl<30?"wn":""}">${dl<0?"vencido":"faltan "+dl+" días"}</span></div>
+ <div class="mu">Mensual: ${money(m.i)} · Ganancia: ${money(m.g)}</div>
+ ${c.notas?`<div class="mu" style="margin-top:6px">📝 ${esc(c.notas)}</div>`:""}${TL(c)}
+ <div class="row" style="margin-top:8px"><button class="g" data-a="edit" data-v="${c.id}">Editar</button><button class="g" data-a="crep" data-v="${c.id}">Informe</button><button class="g d" data-a="toggle" data-v="${c.id}">${c.active?"Dar de baja":"Reactivar"}</button></div></div>`}).join("")||'<p class="mu">Aún no hay clientes. Agrega el primero en “Cliente nuevo”.</p>'}</div>`;
+}
+
+function vPar(){
+ const P=S.partners||[],T=totals();
+ return `<div class="stats"><div><b>${P.filter(p=>p.active!==false).length}</b><span class="mu">Partners activos</span></div><div><b>${money(T.C)}</b><span class="mu">Comisiones mensuales</span></div><div><b>${money(T.N)}</b><span class="mu">Mi ganancia neta</span></div></div>
+ <div class="grid">${P.map(p=>{const t=pstat(p);return `<div class="card"><b>${esc(p.nombre)}</b> ${p.active===false?'<span class="mu">(baja)</span>':""}<div class="mu">${esc(p.negocio)}</div><div class="mu">${esc(p.contacto)}</div>
+ <div class="mu">Desde ${fd(p.ini)} · Comisión: <b>${+p.pct||0}%</b> de la ganancia de sus referidos</div>
+ <div style="margin-top:6px">${t.L.map(c=>`<span class="tag">${esc(c.nombre)} · ${money(monthly(c).g)}</span>`).join("")||'<span class="mu">Aún sin clientes referidos activos.</span>'}</div>
+ <div class="mu" style="margin-top:6px">Ganancia generada: ${money(t.G)} · Comisión mensual: <b>${money(t.C)}</b></div>
+ ${p.notas?`<div class="mu" style="margin-top:6px">📝 ${esc(p.notas)}</div>`:""}
+ <div class="row" style="margin-top:8px"><button class="g" data-a="editP" data-v="${p.id}">Editar</button><button class="g d" data-a="togP" data-v="${p.id}">${p.active===false?"Reactivar":"Dar de baja"}</button></div></div>`}).join("")||'<p class="mu">Aún no hay partners. Agrega el primero en “Partner nuevo”.</p>'}</div>
+ <p class="mu">La comisión se calcula sobre la ganancia mensual estimada (cobro menos costo real) de los clientes activos que referió. Para ligar un cliente a un partner, usa el campo “Referido por” al crear o editar el cliente.</p>`;
+}
+function vParN(){
+ const p=ui.editP?par(ui.editP):{nombre:"",contacto:"",negocio:"",pct:35,ini:today(),notas:""};
+ return `<div class="card"><h3 style="margin-top:0">${ui.editP?"Editar partner":"Partner nuevo"}</h3>
+ <div class="f2"><div><label>Nombre</label><input id="fp_nombre" value="${esc(p.nombre)}"></div>
+ <div><label>Contacto (teléfono / correo)</label><input id="fp_contacto" value="${esc(p.contacto)}"></div>
+ <div><label>Negocio</label><input id="fp_negocio" value="${esc(p.negocio)}"></div>
+ <div><label>Comisión sobre la ganancia (%) — normalmente 35 a 50</label><input type="number" min="0" max="100" id="fp_pct" value="${+p.pct||0}"></div>
+ <div><label>Inicio de la alianza</label><input type="date" id="fp_ini" value="${p.ini}"></div></div>
+ <label style="margin-top:10px">Notas del acuerdo (forma de pago de comisión, condiciones)</label><textarea id="fp_notas">${esc(p.notas)}</textarea>
+ <div class="row" style="margin-top:10px"><button class="b" data-a="saveP">Guardar partner</button>${ui.editP?'<button class="g" data-a="cancelP">Cancelar</button>':""}</div></div>`;
+}
+function vNew(){
+ const c=ui.edit?cl(ui.edit):{nombre:"",contacto:"",negocio:"",enc:"",ini:today(),meses:6,notas:"",svcs:[]};
+ return `<div class="card"><h3 style="margin-top:0">${ui.edit?"Editar cliente":"Cliente nuevo"}</h3>
+ <div class="f2"><div><label>Nombre</label><input id="f_nombre" value="${esc(c.nombre)}"></div>
+ <div><label>Contacto (teléfono / correo)</label><input id="f_contacto" value="${esc(c.contacto)}"></div>
+ <div><label>Negocio</label><input id="f_negocio" value="${esc(c.negocio)}"></div>
+ <div><label>Comisionado del proyecto</label><input id="f_enc" list="dl_enc" value="${esc(c.enc)}"><datalist id="dl_enc">${(S.mgrs||[]).map(m=>`<option value="${esc(m.n)}">`).join("")}</datalist></div>
+ <div><label>Referido por (partner)</label><select id="f_ref"><option value="">— Cliente directo —</option>${(S.partners||[]).filter(p=>p.active!==false||p.id===c.ref).map(p=>`<option value="${esc(p.id)}"${p.id===c.ref?" selected":""}>${esc(p.nombre)} (${+p.pct||0}%)</option>`).join("")}</select></div>
+ <div><label>Inicio del servicio</label><input type="date" id="f_ini" value="${c.ini}"></div>
+ <div><label>Tiempo de servicio asegurado (meses)</label><input type="number" min="0" id="f_meses" value="${c.meses}"></div></div>
+ <h4>Servicios contratados y cobro</h4><div class="tw"><table><tr><th></th><th>Servicio</th><th>Cobro al cliente</th><th>Periodicidad</th><th>Costo real</th></tr>
+ ${S.services.map(s=>{const x=(c.svcs||[]).find(y=>y.sid===s.id);return `<tr><td><input type="checkbox" style="width:auto" id="c_${s.id}"${x?" checked":""}></td><td>${esc(s.n)}</td><td><input type="number" id="p_${s.id}" value="${x?x.p:price(s)}"></td><td><select id="q_${s.id}">${opt(FQ.map(f=>[f,f]),x?x.f:s.u)}</select></td><td><input type="number" id="r_${s.id}" value="${x&&x.r!=null?x.r:s.c}"></td></tr>`}).join("")}</table></div>
+ <label style="margin-top:10px">Información comercial del cliente (acuerdos, forma de pago, notas)</label><textarea id="f_notas">${esc(c.notas)}</textarea>
+ <div class="row" style="margin-top:10px"><button class="b" data-a="saveC">Guardar cliente</button>${ui.edit?'<button class="g" data-a="cancel">Cancelar</button>':""}</div></div>`;
+}
+function vProy(){
+ const act=S.clients.filter(c=>c.active);
+ const f=ui.fc||"";const T=S.tasks.filter(t=>!f||t.cid===f).sort((a,b)=>(a.d||"9").localeCompare(b.d||"9"));
+ return `<div class="card"><b>Agregar parte del proyecto</b><div class="f2" style="margin-top:8px">
+ <div><label>Cliente</label><select id="t_c">${opt(act.map(c=>[c.id,c.nombre+" · "+c.negocio]),"")}</select></div>
+ <div><label>Parte / entregable</label><input id="t_n" placeholder="Ej. Calendario de contenido octubre"></div>
+ <div><label>Deadline</label><input type="date" id="t_d"></div>
+ <div><label>Estatus</label><select id="t_s">${opt(ST.map(s=>[s,STL[s]]),"pendiente")}</select></div></div>
+ <div class="row" style="margin-top:8px"><button class="b" data-a="addT">Agregar</button></div></div>
+ <div class="row" style="margin-bottom:8px"><label style="margin:0"><input type="checkbox" style="width:auto" data-c="grp"${S.grp?" checked":""}> Agrupar cambios en un informe</label><button class="g" data-a="expT">Exportar CSV</button><label style="margin:0">Filtrar:</label><select data-c="fc" style="width:auto"><option value="">Todos los clientes</option>${opt(act.map(c=>[c.id,c.nombre]),f)}</select></div>
+ <div class="tw"><table><tr><th>Cliente</th><th>Parte</th><th>Deadline</th><th>Estatus</th><th>¿En qué parte va?</th><th></th></tr>
+ ${T.map(t=>{const c=cl(t.cid),late=t.d&&t.d<today()&&t.s!=="terminado"&&t.s!=="implementado";
+ return `<tr class="s-${t.s}"><td>${esc(c?c.nombre:"—")}</td><td>${esc(t.n)}</td><td><input type="date" value="${t.d||""}" data-t="${t.id}" data-f="d" class="${late?"od":""}"></td>
+ <td><select data-t="${t.id}" data-f="s">${opt(ST.map(s=>[s,STL[s]]),t.s)}</select></td>
+ <td><input value="${esc(t.av)}" data-t="${t.id}" data-f="av" placeholder="Ej. diseño listo, falta aprobación"></td>
+ <td><button class="g d" data-a="delT" data-v="${t.id}">✕</button></td></tr>`}).join("")||'<tr><td colspan="6" class="mu">Sin tareas.</td></tr>'}</table></div>
+ <p class="mu">Cada cambio de estatus, avance o deadline genera un informe listo para enviar al cliente.</p>`;
+}
+function vInf(){
+ const P=[...new Set(S.pend.map(p=>p.cid))].map(id=>{const c=cl(id),n=S.pend.filter(p=>p.cid===id).length;return c?`<div class="card row"><b>${esc(c.nombre)}</b><span class="mu">${n} cambio(s) sin informar</span><button class="b" data-a="grp" data-v="${id}">Generar informe agrupado</button></div>`:""}).join("");
+ return P+`<p class="mu">Historial de informes generados por cambios. Copia el texto y envíalo al cliente.</p>`+
+ (S.reports.slice().reverse().map(r=>`<div class="card"><div class="row"><b>${esc(r.t)}</b><span class="mu">${fd(r.f)}</span><button class="g" data-a="showR" data-v="${r.id}">Ver / copiar</button></div></div>`).join("")||'<p class="mu">Aún no hay informes.</p>');
+}
+function vTab(){
+ return `<p class="mu">Define cuánto te cobra quien realiza el servicio (costo) y cuánto ganas tú por administrarlo. El precio al cliente es costo + ganancia.</p>
+ <div class="tw"><table><tr><th>Servicio</th><th>Periodicidad</th><th>Costo (proveedor)</th><th>Mi ganancia</th><th>Precio al cliente</th><th>Margen</th><th>Tareas de plantilla (separa con ;)</th><th></th></tr>
+ ${S.services.map(s=>`<tr><td><input value="${esc(s.n)}" data-s="${s.id}" data-f="n"></td><td><select data-s="${s.id}" data-f="u">${opt(FQ.map(f=>[f,f]),s.u)}</select></td>
+ <td><input type="number" value="${s.c}" data-s="${s.id}" data-f="c"></td><td><input type="number" value="${s.g}" data-s="${s.id}" data-f="g"></td>
+ <td><b>${money(price(s))}</b></td><td>${price(s)?Math.round(s.g/price(s)*100):0}%</td><td><input value="${esc(s.tpl)}" data-s="${s.id}" data-f="tpl" style="min-width:220px"></td><td><button class="g d" data-a="delS" data-v="${s.id}">✕</button></td></tr>`).join("")}</table></div>
+ <div class="row" style="margin-top:10px"><button class="b" data-a="addS">+ Agregar servicio</button></div>
+ <p class="mu">Los valores iniciales son de referencia en MXN: ajústalos con tus costos reales.</p>`;
+}
+function qTot(){let t=0,g=0;ui.q.lines.forEach(l=>{const s=svc(l.sid);if(s){t+=price(s)*l.n;g+=(+s.g)*l.n}});return{t,g}}
+function qText(q){
+ const L=q.lines.map(l=>{const s=svc(l.sid);return s?`• ${s.n}: ${l.n} × ${money(price(s))} (${s.u}) = ${money(price(s)*l.n)}`:""}).filter(Boolean);
+ return `COTIZACIÓN\nPara: ${q.p||"—"}\nFecha: ${fd(today())} · Vigencia: ${q.dias} días\n\n${L.join("\n")}\n\nTOTAL: ${money(q.t??qTot().t)}${q.notas?"\n\nNotas: "+q.notas:""}`;
+}
+function vCot(){
+ const q=ui.q,T=qTot();
+ return `<div class="card"><div class="f2"><div><label>Cliente / prospecto</label><input data-q="p" value="${esc(q.p)}"></div><div><label>Vigencia (días)</label><input type="number" data-q="dias" value="${q.dias}"></div></div>
+ <h4>Servicios</h4>${q.lines.map((l,i)=>{const s=svc(l.sid);return `<div class="row" style="margin-bottom:6px"><select data-q="sid" data-i="${i}" style="flex:2;min-width:180px">${opt(S.services.map(s=>[s.id,s.n]),l.sid)}</select>
+ <input type="number" min="1" value="${l.n}" data-q="n" data-i="${i}" style="width:80px"><span class="mu">${s?"× "+money(price(s))+" ("+s.u+")":""}</span><b>${s?money(price(s)*l.n):""}</b><button class="g d" data-a="delQ" data-v="${i}">✕</button></div>`}).join("")}
+ <button class="g" data-a="addQ">+ Agregar servicio</button>
+ <div style="margin-top:10px"><label>Notas para el cliente</label><textarea data-q="notas">${esc(q.notas)}</textarea></div>
+ <p><b>Total: ${money(T.t)}</b> <span class="mu">· Tu ganancia en esta cotización (interno): ${money(T.g)}</span></p>
+ <div class="row"><button class="b" data-a="saveQ">Guardar cotización</button><button class="g" data-a="copyQ">Ver / copiar texto</button><button class="g" data-a="q2c">Convertir en cliente</button></div></div>
+ <h4>Cotizaciones guardadas</h4>${S.quotes.slice().reverse().map(x=>`<div class="card row"><b>${esc(x.p||"Sin nombre")}</b><span class="mu">${fd(x.f)} · ${money(x.t)}</span><button class="g" data-a="showQ" data-v="${x.id}">Ver / copiar</button><button class="g" data-a="q2cS" data-v="${x.id}">Convertir en cliente</button><button class="g d" data-a="delQs" data-v="${x.id}">✕</button></div>`).join("")||'<p class="mu">Ninguna todavía.</p>'}`;
+}
+function vCom(){return `<p class="mu">Datos comerciales propios: forma de pago, condiciones, datos de facturación, políticas, textos de venta, etc.</p><div class="row" style="margin-bottom:8px"><button class="g" data-a="expJ">Descargar respaldo completo</button></div><textarea id="info" data-c="info" style="min-height:320px">${esc(S.info)}</textarea>`}
+
+function modal(title,text){
+ document.getElementById("md").innerHTML=`<div class="modal"><div class="card"><b>${esc(title)}</b><textarea id="mt" style="margin-top:8px">${esc(text)}</textarea><div class="row" style="margin-top:8px"><button class="b" data-a="copy">Copiar</button><a class="g" style="text-decoration:none;padding:6px 10px;border:1px solid var(--bd);border-radius:7px;color:var(--ac)" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">WhatsApp</a><button class="g" data-a="close">Cerrar</button></div></div></div>`;
+}
+function report(c,t,ch){
+ const lines=[`INFORME DE AVANCE – ${c.negocio||c.nombre}`,`Fecha: ${fd(today())}`,`Responsable del proyecto: ${c.enc||"—"}`,"",`Actualización: ${t.n}`,...ch.map(x=>"• "+x),`Estatus actual: ${STL[t.s]}`,t.av?`Avance: ${t.av}`:"",`Fecha compromiso: ${fd(t.d)}`].filter((x,i,a)=>x!==""||a[i-1]!=="");
+ const text=lines.join("\n"),r={id:uid(),f:today(),t:`${c.nombre} – ${t.n}`,x:text};
+ S.reports.push(r);modal("Informe para el cliente",text);
+}
+function fullReport(c){
+ const T=S.tasks.filter(t=>t.cid===c.id);
+ let x=`INFORME GENERAL – ${c.negocio||c.nombre}\nFecha: ${fd(today())}\nResponsable: ${c.enc||"—"}\n`;
+ ST.forEach(s=>{const L=T.filter(t=>t.s===s);if(L.length)x+=`\n${STL[s].toUpperCase()}\n`+L.map(t=>`• ${t.n}${t.av?" – "+t.av:""} (deadline ${fd(t.d)})`).join("\n")+"\n"});
+ if(!T.length)x+="\nSin partes registradas.";
+ modal("Informe general – "+c.nombre,x);
+}
+const TL=c=>S.tasks.filter(t=>t.cid===c.id&&t.s!=="implementado").map(t=>`<div class="row s-${t.s}" style="margin-top:4px;padding-left:6px"><span style="flex:1;font-size:13px">${esc(t.n)} <span class="mu">${fd(t.d)}</span></span><select data-t="${t.id}" data-f="s" style="width:auto;padding:3px">${opt(ST.map(s=>[s,STL[s]]),t.s)}</select></div>`).join("");
+const csv=r=>"\ufeff"+r.map(a=>a.map(v=>'"'+String(v??"").replace(/"/g,'""')+'"').join(",")).join("\n");
+function dl(name,data){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data],{type:"text/plain;charset=utf-8"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function toCli(p,L){if(!L.length){alert("Agrega servicios a la cotización.");return false}const C={id:uid(),active:true,nt:true,nombre:p||"Cliente nuevo",contacto:"",negocio:"",enc:"",ini:today(),meses:6,notas:"",svcs:L.map(l=>{const s=svc(l.sid);return{sid:l.sid,p:price(s),f:s.u,r:+s.c}})};S.clients.push(C);ui.edit=C.id;tab="nuevo"}
+function vHoy(){
+ const t0=today(),t7=addD(t0,7),open=S.tasks.filter(t=>t.s==="pendiente"||t.s==="trabajando"),late=open.filter(t=>t.d&&t.d<t0),wk=open.filter(t=>t.d>=t0&&t.d<=t7),exp=S.clients.filter(c=>c.active&&days(addM(c.ini,+c.meses||0))<=30),pen=S.pagos.filter(p=>!p.ok&&p.f<=t7);
+ const tl=L=>L.map(t=>{const c=cl(t.cid);return `<div class="row s-${t.s}" style="padding-left:8px;margin-bottom:4px"><span style="flex:1">${esc(t.n)} <span class="mu">· ${esc(c?c.nombre:"")} · ${fd(t.d)}</span></span><select data-t="${t.id}" data-f="s" style="width:auto">${opt(ST.map(s=>[s,STL[s]]),t.s)}</select></div>`}).join("")||'<p class="mu">Nada por aquí 🎉</p>';
+ const T=totals(),hasP=(S.partners||[]).length>0;
+ return `<div class="stats"><div><b>${money(T.I)}</b><span class="mu">Ingreso mensual estimado</span></div><div><b>${money(T.G)}</b><span class="mu">Ganancia antes de comisiones</span></div>${hasP?`<div><b>${money(T.C)}</b><span class="mu">Comisiones a partners</span></div><div><b>${money(T.N)}</b><span class="mu">Mi ganancia neta</span></div>`:""}</div>${partnerCard()}${outCard()}<div class="row" style="margin-bottom:10px"><button class="b" data-a="expE">⬇ Descargar estado general (para IA)</button></div><div class="card"><h3 class="od" style="margin-top:0">Vencidas (${late.length})</h3>${tl(late)}</div><div class="card"><h3 style="margin-top:0">Próximos 7 días (${wk.length})</h3>${tl(wk)}</div><div class="card"><h3 style="margin-top:0">Cobros vencidos o próximos (${pen.length})</h3>${pen.map(p=>{const c=cl(p.cid);return `<div class="row"><span style="flex:1">${esc(c?c.nombre:"")} · ${esc(p.c)} · ${money(p.a)}</span><span class="${p.f<t0?"od":""}">${fd(p.f)}</span></div>`}).join("")||'<p class="mu">Sin cobros pendientes.</p>'}</div><div class="card"><h3 style="margin-top:0">Contratos por vencer (30 días)</h3>${exp.map(c=>{const e=addM(c.ini,+c.meses||0);return `<div class="row"><span style="flex:1">${esc(c.nombre)} · ${esc(c.negocio)}</span><span class="${days(e)<0?"od":"wn"}">${fd(e)}</span></div>`}).join("")||'<p class="mu">Ninguno.</p>'}</div>`;
+}
+function vCob(){
+ const P=S.pagos.slice().sort((a,b)=>a.f.localeCompare(b.f)),pen=P.filter(p=>!p.ok),late=pen.filter(p=>p.f<today()),sum=l=>l.reduce((t,p)=>t+p.a,0);
+ return `<div class="stats"><div><b>${money(sum(pen))}</b><span class="mu">Por cobrar</span></div><div><b class="od">${money(sum(late))}</b><span class="mu">Vencido (${late.length})</span></div><div><b>${money(sum(P.filter(p=>p.ok)))}</b><span class="mu">Cobrado</span></div></div><div class="row" style="margin-bottom:10px"><button class="b" data-a="genP">Generar cobros del mes</button><button class="g" data-a="addP">+ Cobro manual</button><button class="g" data-a="expP">Exportar CSV</button></div><div class="tw"><table><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Pagado</th><th></th></tr>${P.map(p=>`<tr><td><select data-p="${p.id}" data-f="cid">${opt(S.clients.map(c=>[c.id,c.nombre]),p.cid)}</select></td><td><input value="${esc(p.c)}" data-p="${p.id}" data-f="c"></td><td><input type="number" value="${p.a}" data-p="${p.id}" data-f="a"></td><td><input type="date" value="${p.f}" data-p="${p.id}" data-f="f" class="${!p.ok&&p.f<today()?"od":""}"></td><td><input type="checkbox" style="width:auto" ${p.ok?"checked":""} data-p="${p.id}" data-f="ok"> <span class="mu">${p.ok?fd(p.fp):""}</span></td><td><button class="g d" data-a="delP" data-v="${p.id}">✕</button></td></tr>`).join("")||'<tr><td colspan="6" class="mu">Sin cobros. Genera los del mes.</td></tr>'}</table></div><p class="mu">“Generar cobros del mes” crea la mensualidad de cada cliente activo (mensual + semanal×4.33); los servicios de pago único agrégalos con “Cobro manual”.</p>`;
+}
+const lg=(cid,x)=>{S.log.push({f:today(),cid,x});if(S.log.length>400)S.log=S.log.slice(-400)};
+const COL={pendiente:"#9aa0ab",trabajando:"#d99a1a",terminado:"#2f7de1",implementado:"#2e9e6b",cobro:"#8a5cd6",pagado:"#2e9e6b",fin:"#b42318"};
+const KL={pendiente:"Tarea pendiente",trabajando:"Tarea en proceso",terminado:"Tarea terminada",implementado:"Implementado",cobro:"Cobro por recibir",pagado:"Cobro pagado",fin:"Fin de contrato"};
+function evs(cid){const E=[];S.tasks.filter(t=>t.d&&(!cid||t.cid===cid)).forEach(t=>E.push({d:t.d,k:t.s,x:t.n,cid:t.cid}));S.pagos.filter(p=>!cid||p.cid===cid).forEach(p=>E.push({d:p.f,k:p.ok?"pagado":"cobro",x:"Cobro "+money(p.a),cid:p.cid}));(role!=="mgr"?S.clients:[]).filter(c=>c.active&&(!cid||c.id===cid)).forEach(c=>E.push({d:addM(c.ini,+c.meses||0),k:"fin",x:"Fin de contrato",cid:c.id}));return E}
+function vCal(){
+ const t0=today(),m=ui.cm||t0.slice(0,7),[Y,M]=m.split("-").map(Number),off=(new Date(Y,M-1,1).getDay()+6)%7,dim=new Date(Y,M,0).getDate(),E=evs(ui.cc||""),sel=ui.cd||"",open=k=>k==="pendiente"||k==="trabajando"||k==="cobro";
+ const who=e=>!ui.cc?esc((cl(e.cid)?.nombre||"").split(" ")[0])+": ":"";
+ const nx=S.clients.filter(c=>c.active&&(!ui.cc||c.id===ui.cc)).map(c=>{const o=S.tasks.filter(t=>t.cid===c.id&&(t.s==="pendiente"||t.s==="trabajando")).sort((a,b)=>(a.d||"9").localeCompare(b.d||"9")),late=o.filter(t=>t.d&&t.d<t0).length,t=o[0];return `<div class="card" style="margin:0"><b>${esc(c.nombre)}</b> ${late?`<span class="od">· ${late} vencida(s)</span>`:""}<div class="mu">${t?"Sigue: "+esc(t.n)+" · "+fd(t.d)+(t.av?" · "+esc(t.av):""):"Sin tareas abiertas"}</div></div>`}).join("");
+ let cells="";for(let i=0;i<off;i++)cells+="<div></div>";
+ for(let d=1;d<=dim;d++){const ds=m+"-"+String(d).padStart(2,"0"),L=E.filter(e=>e.d===ds);cells+=`<div data-a="day" data-v="${ds}" style="min-height:68px;border:1px solid ${ds===sel?"var(--ac)":"var(--bd)"};border-radius:6px;padding:3px;cursor:pointer;overflow:hidden;background:${ds===t0?"var(--ac2)":"var(--sf)"}"><div class="mu" style="font-size:11px">${d}</div>${L.slice(0,3).map(e=>`<div style="font-size:10px;line-height:1.2;margin-top:2px;padding:1px 3px;border-radius:3px;color:#fff;background:${COL[e.k]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${open(e.k)&&e.d<t0?"outline:2px solid var(--er)":""}">${who(e)}${esc(e.x)}</div>`).join("")}${L.length>3?`<div class="mu" style="font-size:10px">+${L.length-3} más</div>`:""}</div>`}
+ const DL=E.filter(e=>e.d===sel).map(e=>`<div class="row" style="margin-bottom:4px"><span class="tag" style="background:${COL[e.k]};color:#fff">${KL[e.k]}</span><span>${who(e)}${esc(e.x)}</span></div>`).join("");
+ return `<div class="grid" style="margin-bottom:14px">${nx||'<p class="mu">Sin clientes activos.</p>'}</div>
+ <div class="row" style="margin-bottom:8px"><button class="g" data-a="cm" data-v="-1">◀</button><b style="min-width:140px;text-align:center;text-transform:capitalize">${new Date(Y,M-1,1).toLocaleString("es-MX",{month:"long",year:"numeric"})}</b><button class="g" data-a="cm" data-v="1">▶</button><button class="g" data-a="cmt">Hoy</button><select data-c="cc" style="width:auto"><option value="">Todos los clientes</option>${opt(S.clients.filter(c=>c.active).map(c=>[c.id,c.nombre]),ui.cc||"")}</select></div>
+ <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">${["L","M","M","J","V","S","D"].map(x=>`<div class="mu" style="text-align:center">${x}</div>`).join("")}${cells}</div>
+ <div class="row" style="margin-top:8px">${Object.keys(KL).map(k=>`<span class="mu"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${COL[k]}"></span> ${KL[k]}</span>`).join("")}<span class="mu"><span style="display:inline-block;width:10px;height:10px;border:2px solid var(--er)"></span> Vencido</span></div>
+ ${sel?`<div class="card" style="margin-top:10px"><b>${fd(sel)}</b><div style="margin-top:6px">${DL||'<span class="mu">Sin eventos este día.</span>'}</div></div>`:""}`;
+}
+function buildState(){
+ const t0=today(),act=S.clients.filter(c=>c.active),w=addD(t0,-7),sh=d=>{const n=days(d);return n<0?"⚠ VENCIDA hace "+(-n)+" día(s)":n<=3?"(próxima: en "+n+" día(s))":""};
+ let I=0,G=0;act.forEach(c=>{const m=monthly(c);I+=m.i;G+=m.g});
+ let x=`# ESTADO GENERAL DE CLIENTES ACTIVOS\nFecha del reporte: ${t0}\nClientes activos: ${act.length} | Ingreso mensual estimado: ${money(I)} | Ganancia mensual estimada: ${money(G)}\n\n## INSTRUCCIONES PARA LA IA\nActúa como mi asistente de seguimiento de cuentas. Con estos datos dame: (1) resumen de lo ocurrido en las últimas 24 horas y en la última semana, (2) lo urgente hoy (vencido o con deadline en 3 días), (3) riesgos (cobros vencidos, contratos por vencer, tareas estancadas), (4) el siguiente paso recomendado por cliente, (5) mensajes breves sugeridos para los clientes que lo requieran. Sé concreto y breve.\n\n`;
+ act.forEach(c=>{const e=addM(c.ini,+c.meses||0),m=monthly(c),T=S.tasks.filter(t=>t.cid===c.id),P=S.pagos.filter(p=>p.cid===c.id),Lg=S.log.filter(l=>l.cid===c.id&&l.f>=w),Pd=S.pend.filter(p=>p.cid===c.id);
+ x+=`## CLIENTE: ${c.nombre} (${c.negocio||"sin negocio"})\n- Contacto: ${c.contacto||"—"} | Comisionado: ${c.enc||"—"} | Referido por: ${par(c.ref)?.nombre||"directo"}\n- Contrato: ${c.ini} → ${e} (${c.meses} meses, ${days(e)<0?"VENCIDO":"faltan "+days(e)+" días"})\n- Servicios: ${(c.svcs||[]).map(s=>(svc(s.sid)?.n||"?")+" "+money(s.p)+" "+s.f).join("; ")||"—"}\n- Ingreso mensual est.: ${money(m.i)} | Ganancia est.: ${money(m.g)}\n${c.notas?"- Notas comerciales: "+c.notas+"\n":""}`;
+ ST.forEach(s=>{const L=T.filter(t=>t.s===s);if(L.length)x+=`- Tareas ${STL[s]} (${L.length}):\n`+L.map(t=>`  · ${t.n} | deadline ${fd(t.d)} ${s==="pendiente"||s==="trabajando"?(t.d?sh(t.d):""):""} | avance: ${t.av||"—"}`).join("\n")+"\n"});
+ if(!T.length)x+="- Tareas: ninguna registrada\n";
+ const pp=P.filter(p=>!p.ok);x+=`- Cobros pendientes: ${pp.length?pp.map(p=>p.c+" "+money(p.a)+" vence "+fd(p.f)+(p.f<t0?" ⚠ VENCIDO":"")).join("; "):"ninguno"}\n`;
+ x+=`- Actividad últimos 7 días: ${Lg.length?"\n"+Lg.map(l=>"  · "+fd(l.f)+": "+l.x).join("\n"):"sin movimientos"}\n`;
+ if(Pd.length)x+=`- Cambios aún sin informar al cliente: ${Pd.length}\n`;x+="\n"});
+ if(!act.length)x+="No hay clientes activos.\n";return x}
+
+const nm=s=>(s||"").trim().toLowerCase();
+function vMgr(){
+ const t0=today(),t7=addD(t0,7),open=S.tasks.filter(t=>t.s==="pendiente"||t.s==="trabajando"),late=open.filter(t=>t.d&&t.d<t0),wk=open.filter(t=>t.d&&t.d>=t0&&t.d<=t7);
+ const rows=L=>L.sort((a,b)=>(a.d||"9").localeCompare(b.d||"9")).map(t=>`<div class="s-${t.s}" style="padding:4px 8px;margin-top:4px"><div><b>${esc(t.n)}</b> <span class="tag">${STL[t.s]}</span></div><div class="mu">Para: <span class="${t.d&&t.d<t0?"od":""}">${fd(t.d)}${t.d&&t.d<t0?" (vencida)":""}</span>${t.av?" · Va en: "+esc(t.av):" · Falta iniciar"}</div></div>`).join("");
+ return `<h3 style="margin-top:0">Hola${S.mgrName?", "+esc(S.mgrName):""}</h3><div class="stats"><div><b class="od">${late.length}</b><span class="mu">Vencidas</span></div><div><b>${wk.length}</b><span class="mu">Próximos 7 días</span></div><div><b>${open.length}</b><span class="mu">Por realizar</span></div><div><b>${S.clients.length}</b><span class="mu">Clientes asignados</span></div></div><div class="row" style="margin-bottom:10px"><button class="b" data-a="expM">⬇ Descargar informe del día (para IA)</button></div>${S.clients.map(c=>{const o=open.filter(t=>t.cid===c.id),dn=S.tasks.filter(t=>t.cid===c.id&&(t.s==="terminado"||t.s==="implementado")).length;return `<div class="card"><b>${esc(c.nombre)}</b> <span class="mu">· ${esc(c.negocio)} · ${esc(c.contacto)}</span><div>${(c.svcs||[]).map(x=>`<span class="tag">${esc(x.n)}</span>`).join("")}</div><div class="mu" style="margin-top:4px">Por realizar: ${o.length} · Terminadas/implementadas: ${dn}</div>${rows(o)||'<p class="mu">Sin pendientes 🎉</p>'}</div>`}).join("")||'<p class="mu">Aún no tienes clientes asignados. Pide al administrador que te asigne.</p>'}`;
+}
+function buildMgr(){
+ const t0=today(),sh=d=>{const n=days(d);return n<0?"⚠ VENCIDA hace "+(-n)+" día(s)":n===0?"VENCE HOY":n<=3?"(en "+n+" día(s))":""};
+ let x=`# MIS ACTIVIDADES DEL DÍA\nFecha: ${t0}\nComisionado de proyectos: ${S.mgrName||""}\nClientes asignados: ${S.clients.length}\n\n## INSTRUCCIONES PARA LA IA\nActúa como mi asistente. Con estos datos dime: (1) qué debo hacer hoy en orden de prioridad, (2) qué está vencido o en riesgo, (3) qué sigue para cada cliente, (4) a quién conviene avisar o pedirle información. Sé concreto y breve.\n\n`;
+ S.clients.forEach(c=>{x+=`## CLIENTE: ${c.nombre} (${c.negocio||"—"})\n- Contacto: ${c.contacto||"—"}\n- Servicios: ${(c.svcs||[]).map(s=>s.n).join("; ")||"—"}\n`;
+  ST.forEach(s=>{const L=S.tasks.filter(t=>t.cid===c.id&&t.s===s);if(L.length)x+=`- ${STL[s]} (${L.length}):\n`+L.map(t=>`  · ${t.n} | deadline ${fd(t.d)} ${(s==="pendiente"||s==="trabajando")&&t.d?sh(t.d):""} | avance: ${t.av||"—"}`).join("\n")+"\n"});x+="\n"});
+ if(!S.clients.length)x+="Sin clientes asignados.\n";return x}
+function vUsr(){return `<p class="mu">Usuarios del sistema (se definen al instalar). Para que un cliente aparezca en la vista de un comisionado, escribe su nombre exactamente igual en “Comisionado del proyecto”.</p>`+S.mgrs.map((m,i)=>`<div class="card"><b>Comisionado ${i+1}: ${esc(m.n)}</b><div class="mu">Clientes asignados: ${S.clients.filter(c=>c.active&&nm(c.enc)===nm(m.n)).length}</div></div>`).join("")+`<p class="mu">Para cambiar contraseñas o nombres: borra data/users.json en el servidor y abre setup.php de nuevo (tus clientes no se borran).</p>`}
+function A(a,v,el){
+ const M={
+ tab(){tab=v;ui.edit=null;ui.editP=null},
+ edit(){ui.edit=v;tab="nuevo"},cancel(){ui.edit=null;tab="clientes"},
+ toggle(){const c=cl(v);c.active=!c.active},
+ genO(){
+  const now=new Date(),mm=now.toLocaleString("es-MX",{month:"long",year:"numeric"}),f=iso(new Date(now.getFullYear(),now.getMonth(),28));
+  if(!S.pagosOut)S.pagosOut=[];let n=0;
+  const add=(k,w,c,a)=>{a=Math.round(a);if(a<=0||S.pagosOut.some(o=>o.k===k&&o.w===w&&o.c===c))return;S.pagosOut.push({id:uid(),k,w,c,a,f,ok:false,fp:""});n++};
+  (S.partners||[]).forEach(p=>add("partner",p.id,"Comisión "+mm,pstat(p).C));
+  mgrNames().forEach(name=>add("mgr",name,"Pago equipo "+mm,S.clients.filter(c=>c.active&&nm(c.enc)===nm(name)).reduce((t,c)=>t+mcost(c),0)));
+  const sin=S.clients.filter(c=>c.active&&mcost(c)>0&&!mgrNames().some(x=>nm(x)===nm(c.enc))).length;
+  if(!n)alert("No hay pagos nuevos por generar este mes.");else if(sin)alert("Ojo: "+sin+" cliente(s) activo(s) no tienen comisionado asignado y no se incluyeron.")},
+ addO(){if(!S.pagosOut)S.pagosOut=[];S.pagosOut.push({id:uid(),k:"mgr",w:mgrNames()[0]||"",c:"Pago manual",a:0,f:today(),ok:false,fp:""})},
+ delO(){S.pagosOut=S.pagosOut.filter(o=>o.id!==v)},
+ expO(){dl("pagos-equipo-partners.csv",csv([["Tipo","Beneficiario","Concepto","Monto","Vence","Pagado","Fecha de pago"],...(S.pagosOut||[]).map(o=>[o.k==="partner"?"Partner":"Equipo",oWho(o),o.c,o.a,o.f,o.ok?"Sí":"No",o.fp])]));return false},
+ editP(){ui.editP=v;tab="parn"},cancelP(){ui.editP=null;tab="par"},
+ togP(){const p=par(v);p.active=p.active===false},
+ saveP(){
+  const g=i=>document.getElementById(i).value.trim();
+  if(!g("fp_nombre")){alert("Escribe el nombre del partner.");return false}
+  const pct=+g("fp_pct");if(!(pct>=0&&pct<=100)){alert("La comisión debe estar entre 0 y 100.");return false}
+  const d={nombre:g("fp_nombre"),contacto:g("fp_contacto"),negocio:g("fp_negocio"),pct,ini:g("fp_ini")||today(),notas:g("fp_notas")};
+  if(!S.partners)S.partners=[];
+  if(ui.editP)Object.assign(par(ui.editP),d);else S.partners.push({id:uid(),active:true,...d});
+  ui.editP=null;tab="par"},
+ crep(){fullReport(cl(v))},
+ saveC(){
+  const g=i=>document.getElementById(i).value.trim();
+  if(!g("f_nombre")){alert("Escribe el nombre del cliente.");return false}
+  const svcs=S.services.filter(s=>document.getElementById("c_"+s.id).checked).map(s=>({sid:s.id,p:+document.getElementById("p_"+s.id).value||0,f:document.getElementById("q_"+s.id).value,r:+document.getElementById("r_"+s.id).value||0}));
+  const d={nombre:g("f_nombre"),contacto:g("f_contacto"),negocio:g("f_negocio"),enc:g("f_enc"),ref:g("f_ref"),ini:g("f_ini")||today(),meses:+g("f_meses")||0,notas:g("f_notas"),svcs};
+  const pv=ui.edit?cl(ui.edit):null,old=pv&&!pv.nt?(pv.svcs||[]).map(x=>x.sid):[];let C=pv;if(pv)Object.assign(pv,d,{nt:false});else{C={id:uid(),active:true,...d};S.clients.push(C)}lg(C.id,pv?"Datos del cliente actualizados":"Cliente nuevo registrado");
+  svcs.filter(x=>!old.includes(x.sid)).forEach(x=>{const s=svc(x.sid);(s.tpl||"").split(";").map(z=>z.trim()).filter(Boolean).forEach((n,i)=>S.tasks.push({id:uid(),cid:C.id,n,d:addD(d.ini>today()?d.ini:today(),7*(i+1)),s:"pendiente",av:""}))});
+  ui.edit=null;tab="clientes"},
+ addT(){const n=document.getElementById("t_n").value.trim(),c=document.getElementById("t_c").value;
+  if(!n||!c){alert("Elige cliente y escribe la parte del proyecto.");return false}
+  S.tasks.push({id:uid(),cid:c,n,d:document.getElementById("t_d").value,s:document.getElementById("t_s").value,av:""});lg(c,"Nueva parte del proyecto: "+n)},
+ delT(){S.tasks=S.tasks.filter(t=>t.id!==v)},
+ showR(){const r=S.reports.find(x=>x.id===v);modal(r.t,r.x);return false},
+ addS(){S.services.push({id:uid(),n:"Nuevo servicio",c:0,g:0,u:"mensual"})},
+ delS(){if(confirm("¿Eliminar este servicio del tabulador?"))S.services=S.services.filter(s=>s.id!==v)},
+ addQ(){ui.q.lines.push({sid:S.services[0]?.id,n:1})},
+ delQ(){ui.q.lines.splice(+v,1)},
+ saveQ(){const T=qTot();S.quotes.push({id:uid(),f:today(),p:ui.q.p,t:T.t,x:qText({...ui.q,t:T.t}),l:JSON.parse(JSON.stringify(ui.q.lines))});ui.q={p:"",lines:[],notas:"",dias:15}},
+ copyQ(){modal("Cotización",qText(ui.q));return false},
+ showQ(){const x=S.quotes.find(y=>y.id===v);modal("Cotización – "+x.p,x.x);return false},
+ delQs(){S.quotes=S.quotes.filter(x=>x.id!==v)},
+ q2c(){return toCli(ui.q.p,ui.q.lines)},
+ q2cS(){const x=S.quotes.find(y=>y.id===v);return toCli(x.p,x.l||[])},
+ grp(){const c=cl(v),L=S.pend.filter(p=>p.cid===v),x=`INFORME SEMANAL – ${c.negocio||c.nombre}\nFecha: ${fd(today())}\nResponsable: ${c.enc||"—"}\n\n`+L.map(p=>`• ${p.t} (${fd(p.f)}): ${p.ch}`).join("\n");S.reports.push({id:uid(),f:today(),t:c.nombre+" – informe agrupado",x});S.pend=S.pend.filter(p=>p.cid!==v);modal("Informe agrupado",x)},
+ genP(){const now=new Date(),mm=now.toLocaleString("es-MX",{month:"long",year:"numeric"});let n=0;S.clients.filter(c=>c.active).forEach(c=>{const a=Math.round(monthly(c).i),con="Mensualidad "+mm;if(!a||S.pagos.some(p=>p.cid===c.id&&p.c===con))return;S.pagos.push({id:uid(),cid:c.id,c:con,a,f:iso(new Date(now.getFullYear(),now.getMonth(),Math.min(28,+c.ini.slice(8)||1))),ok:false,fp:""});n++});if(!n)alert("No hay cobros nuevos por generar este mes.")},
+ addP(){const c=S.clients.find(c=>c.active);if(!c){alert("Primero agrega un cliente.");return false}S.pagos.push({id:uid(),cid:c.id,c:"Cobro manual",a:0,f:today(),ok:false,fp:""})},
+ delP(){S.pagos=S.pagos.filter(p=>p.id!==v)},
+ expC(){dl("clientes.csv",csv([["Nombre","Contacto","Negocio","Comisionado","Referido por","Inicio","Meses","Servicios","Ingreso mensual","Ganancia mensual"],...S.clients.map(c=>{const m=monthly(c);return[c.nombre,c.contacto,c.negocio,c.enc,par(c.ref)?.nombre||"Directo",c.ini,c.meses,(c.svcs||[]).map(x=>(svc(x.sid)?.n||"")+" "+money(x.p)+" "+x.f).join("; "),Math.round(m.i),Math.round(m.g)]})]));return false},
+ expT(){dl("tareas.csv",csv([["Cliente","Parte","Deadline","Estatus","Avance"],...S.tasks.map(t=>[cl(t.cid)?.nombre,t.n,t.d,STL[t.s],t.av])]));return false},
+ expP(){dl("cobros.csv",csv([["Cliente","Concepto","Monto","Vence","Pagado","Fecha de pago"],...S.pagos.map(p=>[cl(p.cid)?.nombre,p.c,p.a,p.f,p.ok?"Sí":"No",p.fp])]));return false},
+ expJ(){dl("respaldo-clientes.json",JSON.stringify(S,null,1));return false},
+ cm(){const [Y,M]=(ui.cm||today().slice(0,7)).split("-").map(Number),d=new Date(Y,M-1+ +v,1);ui.cm=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")},
+ cmt(){ui.cm=today().slice(0,7);ui.cd=today()},
+ day(){ui.cd=v},
+ expE(){dl("estado-clientes-"+today()+".txt",buildState());return false},
+ out(){api("logout",{}).then(()=>{CSRF="";ready=false;S=defaults();showLogin()});return false},
+ expM(){dl("mis-actividades-"+today()+".txt",buildMgr());return false},
+ close(){document.getElementById("md").innerHTML="";return false},
+ copy(){const t=document.getElementById("mt");t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).catch(()=>document.execCommand("copy"));el.textContent="¡Copiado!";return false}
+ };
+ if(role==="mgr"&&!["tab","cm","cmt","day","expM","close","copy","out"].includes(a))return;const r=M[a]();if(r===false)return;save();render();
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-a]");if(b)A(b.dataset.a,b.dataset.v,b)});
+document.addEventListener("change",e=>{
+ const el=e.target,D=el.dataset;if(role==="mgr"&&D.c!=="cc")return;
+ if(D.c==="all"){ui.all=el.checked;render()}
+ else if(D.c==="fc"){ui.fc=el.value;render()}
+ else if(D.c==="s"){ui.s=el.value;render()}
+ else if(D.c==="cc"){ui.cc=el.value;render()}
+ else if(D.c==="e"){ui.e=el.value;render()}
+ else if(D.c==="grp"){S.grp=el.checked;save();render()}
+ else if(D.p){const p=S.pagos.find(x=>x.id===D.p);p[D.f]=D.f==="a"?+el.value||0:D.f==="ok"?el.checked:el.value;if(D.f==="ok"){p.fp=el.checked?today():"";lg(p.cid,(el.checked?"Cobro pagado: ":"Cobro marcado como pendiente: ")+p.c+" "+money(p.a))}save();render()}
+ else if(D.o){const o=S.pagosOut.find(x=>x.id===D.o);o[D.f]=D.f==="a"?+el.value||0:D.f==="ok"?el.checked:el.value;if(D.f==="k")o.w=(o.k==="partner"?(S.partners||[])[0]?.id:mgrNames()[0])||"";if(D.f==="ok")o.fp=el.checked?today():"";save();render()}
+ else if(D.c==="info"){S.info=el.value;save()}
+ else if(D.t){const t=S.tasks.find(x=>x.id===D.t),f=D.f,old=t[f];if(old===el.value)return;t[f]=el.value;
+  const ch={s:`Estatus: ${STL[old]||old} → ${STL[el.value]||el.value}`,d:`Nuevo deadline: ${fd(el.value)}`,av:`Avance: ${el.value||"—"}`}[f];
+  const c=cl(t.cid);if(c)lg(c.id,t.n+" – "+ch);if(c&&S.grp)S.pend.push({cid:c.id,t:t.n,ch,f:today()});save();if(c&&!S.grp)report(c,t,[ch]);render()}
+ else if(D.s){const s=svc(D.s);s[D.f]=["c","g"].includes(D.f)?+el.value||0:el.value;save();render()}
+ else if(D.q){const q=ui.q;if(D.i!==undefined){const l=q.lines[+D.i];l[D.q]=D.q==="n"?Math.max(1,+el.value||1):el.value}else q[D.q]=D.q==="dias"?+el.value||0:el.value;render()}
+});
+boot();
+</script></body></html>
